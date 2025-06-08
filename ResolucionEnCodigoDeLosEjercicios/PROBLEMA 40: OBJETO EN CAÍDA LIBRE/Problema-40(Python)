@@ -1,0 +1,126 @@
+# ==============================================================================
+#        SOLUCIÓN NUMÉRICA - PROBLEMA 40: OBJETO EN CAÍDA LIBRE
+# ==============================================================================
+# Este script resuelve la EDO de un objeto en caída con resistencia del aire
+# usando los métodos de Heun y Runge-Kutta de 4to orden (RK4).
+#
+# Ecuación: dv/dt = g - (k/m) * v^2
+# ==============================================================================
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- 1. Definición del Problema ---
+m = 5.0      # masa (kg)
+g = 9.81     # gravedad (m/s^2)
+k_drag = 0.05    # constante de arrastre (kg/m)
+v0 = 0.0     # velocidad inicial (m/s)
+t_inicial = 0
+t_final = 15
+puntos = 101
+t = np.linspace(t_inicial, t_final, puntos)
+h = t[1] - t[0]   # Paso de tiempo
+
+# Ecuación Diferencial Ordinaria (EDO)
+def f_fall(t, v):
+    """Función del modelo de caída libre con arrastre."""
+    return g - (k_drag / m) * v**2
+
+# --- 2. Desarrollo Detallado del Primer Paso ---
+
+print("=" * 60)
+print("  ANÁLISIS DETALLADO DEL PRIMER PASO DE CÁLCULO (t=0 a t={:.2f})".format(h))
+print("=" * 60)
+print(f"Condiciones iniciales: v(0) = {v0}, h = {h:.3f}\n")
+
+# --- Método de Heun ---
+print("-" * 60)
+print("  Método de Heun (Predictor-Corrector)")
+print("-" * 60)
+
+# Pendiente inicial
+pendiente_inicial_h = f_fall(t[0], v0)
+print(f"1. Pendiente inicial f(t0, v0):")
+print(f"   f(0, 0.0) = {g} - ({k_drag}/{m}) * (0.0)^2 = {pendiente_inicial_h:.4f}")
+
+# Predictor
+v_predictor = v0 + h * pendiente_inicial_h
+print(f"\n2. Predictor v*:")
+print(f"   v* = v0 + h * f(t0, v0) = {v0} + {h:.2f} * {pendiente_inicial_h:.4f} = {v_predictor:.4f}")
+
+# Pendiente en el punto predicho
+pendiente_predicha_h = f_fall(t[1], v_predictor)
+print(f"\n3. Pendiente en el punto final (usando v*):")
+print(f"   f(t1, v*) = f({h:.2f}, {v_predictor:.4f}) = {pendiente_predicha_h:.4f}")
+
+# Corrector
+v1_heun = v0 + (h / 2) * (pendiente_inicial_h + pendiente_predicha_h)
+print(f"\n4. Corrector (Resultado del paso):")
+print(f"   v(h) = v0 + (h/2) * [f(t0,v0) + f(t1,v*)]")
+print(f"   v({h:.2f}) = {v0} + ({h:.2f}/2) * [{pendiente_inicial_h:.4f} + {pendiente_predicha_h:.4f}] = {v1_heun:.4f}\n")
+
+# --- Método RK4 ---
+print("-" * 60)
+print("  Método de Runge-Kutta de 4to Orden (RK4)")
+print("-" * 60)
+
+k1 = f_fall(t[0], v0)
+print(f"1. k1 = f(t0, v0) = {k1:.4f}")
+
+k2 = f_fall(t[0] + h/2, v0 + (h/2) * k1)
+print(f"2. k2 = f(t0+h/2, v0+h/2*k1) = {k2:.4f}")
+
+k3 = f_fall(t[0] + h/2, v0 + (h/2) * k2)
+print(f"3. k3 = f(t0+h/2, v0+h/2*k2) = {k3:.4f}")
+
+k4 = f_fall(t[0] + h, v0 + h * k3)
+print(f"4. k4 = f(t0+h, v0+h*k3) = {k4:.4f}")
+
+v1_rk4 = v0 + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+print(f"\n5. Resultado del paso:")
+print(f"   v(h) = v0 + (h/6)*(k1 + 2*k2 + 2*k3 + k4)")
+print(f"   v({h:.2f}) = {v0} + ({h:.2f}/6)*({k1:.4f} + 2*{k2:.4f} + 2*{k3:.4f} + {k4:.4f}) = {v1_rk4:.4f}\n")
+print("=" * 60)
+print("  Calculando la solución completa para la gráfica...")
+print("=" * 60)
+
+# --- 3. Solución Completa para la Gráfica ---
+# (Se reusan las mismas funciones de solver de problemas anteriores)
+
+def solve_heun(f, y0, t_points):
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        y_pred = y[i] + h_step * f(t_points[i], y[i])
+        y[i+1] = y[i] + (h_step / 2) * (f(t_points[i], y[i]) + f(t_points[i+1], y_pred))
+    return y
+
+def solve_rk4(f, y0, t_points):
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        rk1 = f(t_points[i], y[i])
+        rk2 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk1)
+        rk3 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk2)
+        rk4 = f(t_points[i] + h_step, y[i] + h_step * rk3)
+        y[i+1] = y[i] + (h_step / 6) * (rk1 + 2*rk2 + 2*rk3 + rk4)
+    return y
+
+# Calcular soluciones completas
+v_heun = solve_heun(f_fall, v0, t)
+v_rk4 = solve_rk4(f_fall, v0, t)
+
+# --- 4. Visualización de Resultados ---
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.figure(figsize=(12, 7))
+plt.plot(t, v_heun, 'c--', label='Método de Heun', linewidth=2)
+plt.plot(t, v_rk4, 'k-', label='Runge-Kutta 4to Orden', linewidth=2, alpha=0.7)
+plt.title(' Problema 40: Velocidad de un Objeto en Caída Libre', fontsize=16)
+plt.xlabel('Tiempo (s)', fontsize=12)
+plt.ylabel('Velocidad (m/s)', fontsize=12)
+plt.axhline(y=np.sqrt(g*m/k_drag), color='gray', linestyle=':', label='Velocidad Terminal Teórica')
+plt.legend(fontsize=11)
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.show()
