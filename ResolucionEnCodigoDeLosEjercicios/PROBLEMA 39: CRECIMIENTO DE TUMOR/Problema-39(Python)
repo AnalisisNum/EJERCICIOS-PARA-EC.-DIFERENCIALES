@@ -1,0 +1,125 @@
+# ==============================================================================
+#           SOLUCIÓN NUMÉRICA - PROBLEMA 39: CRECIMIENTO DE TUMOR
+# ==============================================================================
+# Este script resuelve la EDO de crecimiento de Gompertz usando los métodos
+# de Heun y Runge-Kutta de 4to orden (RK4).
+#
+# Ecuación: dA/dt = α * A * [1 - (A/k)^ν]
+# ==============================================================================
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- 1. Definición del Problema ---
+alpha = 0.8
+k_tumor = 60.0
+nu = 0.25
+A0 = 1.0          # Área inicial (mm^2)
+t_inicial = 0
+t_final = 30
+puntos = 101
+t = np.linspace(t_inicial, t_final, puntos)
+h = t[1] - t[0]   # Paso de tiempo
+
+# Ecuación Diferencial Ordinaria (EDO)
+def f_tumor(t, A):
+    """Función del modelo de crecimiento de un tumor."""
+    return alpha * A * (1 - (A / k_tumor)**nu)
+
+# --- 2. Desarrollo Detallado del Primer Paso ---
+
+print("=" * 60)
+print("  ANÁLISIS DETALLADO DEL PRIMER PASO DE CÁLCULO (t=0 a t={:.2f})".format(h))
+print("=" * 60)
+print(f"Condiciones iniciales: A(0) = {A0}, h = {h:.3f}\n")
+
+# --- Método de Heun ---
+print("-" * 60)
+print("  Método de Heun (Predictor-Corrector)")
+print("-" * 60)
+
+# Pendiente inicial
+pendiente_inicial_h = f_tumor(t[0], A0)
+print(f"1. Pendiente inicial f(t0, A0):")
+print(f"   f(0, 1.0) = {alpha} * 1.0 * [1 - (1.0/{k_tumor})^{nu}] = {pendiente_inicial_h:.4f}")
+
+# Predictor
+A_predictor = A0 + h * pendiente_inicial_h
+print(f"\n2. Predictor A*:")
+print(f"   A* = A0 + h * f(t0, A0) = {A0} + {h:.2f} * {pendiente_inicial_h:.4f} = {A_predictor:.4f}")
+
+# Pendiente en el punto predicho
+pendiente_predicha_h = f_tumor(t[1], A_predictor)
+print(f"\n3. Pendiente en el punto final (usando A*):")
+print(f"   f(t1, A*) = f({h:.2f}, {A_predictor:.4f}) = {pendiente_predicha_h:.4f}")
+
+# Corrector
+A1_heun = A0 + (h / 2) * (pendiente_inicial_h + pendiente_predicha_h)
+print(f"\n4. Corrector (Resultado del paso):")
+print(f"   A(h) = A0 + (h/2) * [f(t0,A0) + f(t1,A*)]")
+print(f"   A({h:.2f}) = {A0} + ({h:.2f}/2) * [{pendiente_inicial_h:.4f} + {pendiente_predicha_h:.4f}] = {A1_heun:.4f}\n")
+
+# --- Método RK4 ---
+print("-" * 60)
+print("  Método de Runge-Kutta de 4to Orden (RK4)")
+print("-" * 60)
+
+k1 = f_tumor(t[0], A0)
+print(f"1. k1 = f(t0, A0) = {k1:.4f}")
+
+k2 = f_tumor(t[0] + h/2, A0 + (h/2) * k1)
+print(f"2. k2 = f(t0+h/2, A0+h/2*k1) = {k2:.4f}")
+
+k3 = f_tumor(t[0] + h/2, A0 + (h/2) * k2)
+print(f"3. k3 = f(t0+h/2, A0+h/2*k2) = {k3:.4f}")
+
+k4 = f_tumor(t[0] + h, A0 + h * k3)
+print(f"4. k4 = f(t0+h, A0+h*k3) = {k4:.4f}")
+
+A1_rk4 = A0 + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+print(f"\n5. Resultado del paso:")
+print(f"   A(h) = A0 + (h/6)*(k1 + 2*k2 + 2*k3 + k4)")
+print(f"   A({h:.2f}) = {A0} + ({h:.2f}/6)*({k1:.4f} + 2*{k2:.4f} + 2*{k3:.4f} + {k4:.4f}) = {A1_rk4:.4f}\n")
+print("=" * 60)
+print("  Calculando la solución completa para la gráfica...")
+print("=" * 60)
+
+# --- 3. Solución Completa para la Gráfica ---
+# (Se reusan las mismas funciones de solver del problema anterior)
+
+def solve_heun(f, y0, t_points):
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        y_pred = y[i] + h_step * f(t_points[i], y[i])
+        y[i+1] = y[i] + (h_step / 2) * (f(t_points[i], y[i]) + f(t_points[i+1], y_pred))
+    return y
+
+def solve_rk4(f, y0, t_points):
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        rk1 = f(t_points[i], y[i])
+        rk2 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk1)
+        rk3 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk2)
+        rk4 = f(t_points[i] + h_step, y[i] + h_step * rk3)
+        y[i+1] = y[i] + (h_step / 6) * (rk1 + 2*rk2 + 2*rk3 + rk4)
+    return y
+
+# Calcular soluciones completas
+A_heun = solve_heun(f_tumor, A0, t)
+A_rk4 = solve_rk4(f_tumor, A0, t)
+
+# --- 4. Visualización de Resultados ---
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.figure(figsize=(12, 7))
+plt.plot(t, A_heun, 'g--', label='Método de Heun', linewidth=2)
+plt.plot(t, A_rk4, 'm-', label='Runge-Kutta 4to Orden', linewidth=2, alpha=0.7)
+plt.title(' Problema 39: Modelo de Crecimiento de un Tumor', fontsize=16)
+plt.xlabel('Tiempo (días)', fontsize=12)
+plt.ylabel('Área del Tumor (mm²)', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.show()
