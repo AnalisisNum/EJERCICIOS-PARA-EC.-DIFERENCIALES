@@ -1,0 +1,126 @@
+# ==============================================================================
+#           SOLUCIÓN NUMÉRICA - PROBLEMA 37: CRECIMIENTO POBLACIONAL
+# ==============================================================================
+# Este script resuelve la EDO de crecimiento logístico usando los métodos
+# de Heun y Runge-Kutta de 4to orden (RK4).
+#
+# Ecuación: dN/dt = k * N * (N_M - N)
+# ==============================================================================
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- 1. Definición del Problema ---
+N_M = 5000.0      # Capacidad límite
+k_pop = 0.000095  # Constante de crecimiento (1/año)
+N0 = 100.0        # Población inicial
+t_inicial = 0
+t_final = 20
+puntos = 101
+t = np.linspace(t_inicial, t_final, puntos)
+h = t[1] - t[0]   # Paso de tiempo
+
+# Ecuación Diferencial Ordinaria (EDO)
+def f_pop(t, N):
+    """Función del modelo de crecimiento poblacional."""
+    return k_pop * N * (N_M - N)
+
+# --- 2. Desarrollo Detallado del Primer Paso ---
+
+print("=" * 60)
+print("  ANÁLISIS DETALLADO DEL PRIMER PASO DE CÁLCULO (t=0 a t={:.2f})".format(h))
+print("=" * 60)
+print(f"Condiciones iniciales: N(0) = {N0}, h = {h:.3f}\n")
+
+# --- Método de Heun ---
+print("-" * 60)
+print("  Método de Heun (Predictor-Corrector)")
+print("-" * 60)
+
+# Pendiente inicial
+pendiente_inicial_h = f_pop(t[0], N0)
+print(f"1. Pendiente inicial f(t0, N0):")
+print(f"   f(0, 100) = {k_pop} * 100 * (5000 - 100) = {pendiente_inicial_h:.4f}")
+
+# Predictor
+N_predictor = N0 + h * pendiente_inicial_h
+print(f"\n2. Predictor N*:")
+print(f"   N* = N0 + h * f(t0, N0) = {N0} + {h:.2f} * {pendiente_inicial_h:.4f} = {N_predictor:.4f}")
+
+# Pendiente en el punto predicho
+pendiente_predicha_h = f_pop(t[1], N_predictor)
+print(f"\n3. Pendiente en el punto final (usando N*):")
+print(f"   f(t1, N*) = f({h:.2f}, {N_predictor:.4f}) = {pendiente_predicha_h:.4f}")
+
+# Corrector
+N1_heun = N0 + (h / 2) * (pendiente_inicial_h + pendiente_predicha_h)
+print(f"\n4. Corrector (Resultado del paso):")
+print(f"   N(h) = N0 + (h/2) * [f(t0,N0) + f(t1,N*)]")
+print(f"   N({h:.2f}) = {N0} + ({h:.2f}/2) * [{pendiente_inicial_h:.4f} + {pendiente_predicha_h:.4f}] = {N1_heun:.4f}\n")
+
+# --- Método RK4 ---
+print("-" * 60)
+print("  Método de Runge-Kutta de 4to Orden (RK4)")
+print("-" * 60)
+
+k1 = f_pop(t[0], N0)
+print(f"1. k1 = f(t0, N0) = {k1:.4f}")
+
+k2 = f_pop(t[0] + h/2, N0 + (h/2) * k1)
+print(f"2. k2 = f(t0+h/2, N0+h/2*k1) = {k2:.4f}")
+
+k3 = f_pop(t[0] + h/2, N0 + (h/2) * k2)
+print(f"3. k3 = f(t0+h/2, N0+h/2*k2) = {k3:.4f}")
+
+k4 = f_pop(t[0] + h, N0 + h * k3)
+print(f"4. k4 = f(t0+h, N0+h*k3) = {k4:.4f}")
+
+N1_rk4 = N0 + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+print(f"\n5. Resultado del paso:")
+print(f"   N(h) = N0 + (h/6)*(k1 + 2*k2 + 2*k3 + k4)")
+print(f"   N({h:.2f}) = {N0} + ({h:.2f}/6)*({k1:.4f} + 2*{k2:.4f} + 2*{k3:.4f} + {k4:.4f}) = {N1_rk4:.4f}\n")
+print("=" * 60)
+print("  Calculando la solución completa para la gráfica...")
+print("=" * 60)
+
+
+# --- 3. Solución Completa para la Gráfica ---
+
+def solve_heun(f, y0, t_points):
+    """Resuelve la EDO con el método de Heun."""
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        y_pred = y[i] + h_step * f(t_points[i], y[i])
+        y[i+1] = y[i] + (h_step / 2) * (f(t_points[i], y[i]) + f(t_points[i+1], y_pred))
+    return y
+
+def solve_rk4(f, y0, t_points):
+    """Resuelve la EDO con el método RK4."""
+    y = np.zeros(len(t_points))
+    y[0] = y0
+    h_step = t_points[1] - t_points[0]
+    for i in range(len(t_points) - 1):
+        rk1 = f(t_points[i], y[i])
+        rk2 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk1)
+        rk3 = f(t_points[i] + h_step/2, y[i] + h_step/2 * rk2)
+        rk4 = f(t_points[i] + h_step, y[i] + h_step * rk3)
+        y[i+1] = y[i] + (h_step / 6) * (rk1 + 2*rk2 + 2*rk3 + rk4)
+    return y
+
+# Calcular soluciones completas
+N_heun = solve_heun(f_pop, N0, t)
+N_rk4 = solve_rk4(f_pop, N0, t)
+
+# --- 4. Visualización de Resultados ---
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.figure(figsize=(12, 7))
+plt.plot(t, N_heun, 'b--', label='Método de Heun', linewidth=2)
+plt.plot(t, N_rk4, 'r-', label='Runge-Kutta 4to Orden', linewidth=2, alpha=0.7)
+plt.title(' Problema 37: Crecimiento Poblacional de una Especie', fontsize=16)
+plt.xlabel('Tiempo (años)', fontsize=12)
+plt.ylabel('Población (N)', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.show()
